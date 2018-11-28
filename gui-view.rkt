@@ -112,21 +112,13 @@
 
   ; World-builder function
   (define (exec-btn-callback _)
-    (let [(world (on-execute (build-world (string?->number (send r0-input get-value))
-                                          (string?->number (send r1-input get-value))
-                                          (string?->number (send r2-input get-value))
-                                          (string?->number (send r3-input get-value))
-                                          (string?->number (send a-bus-addr get-selection))
-                                          (string?->number (send b-bus-addr get-selection))
-                                          (string?->number (send c-bus-addr get-selection))
-                                          (string?->number (send alu-op get-selection)))))]
-      (let [(status (world-status world))]
-        (cond
-          [(= status 0) (set-status-0 world)]
-          [(= status 1) (set-status-1 world)]
-          [(= status 2) (set-status-2 world)]
-          [(= status 3) (set-status-3 world)]
-          [(= status 4) (set-status-4 world)]))))
+    (let [(status (on-execute 0))]
+       (cond
+         [(= status 0) (set-status-0 0)]
+         [(= status 1) (set-status-1 0)]
+         [(= status 2) (set-status-2 0)]
+         [(= status 3) (set-status-3 0)]
+         [(= status 4) (set-status-4 0)])))
 
   (define (set-status-0 world)
     (send a-bus set-value (get-register-value (send a-bus-addr get-selection)))
