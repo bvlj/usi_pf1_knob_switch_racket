@@ -11,6 +11,7 @@
 (provide build-world)
 
 (provide on-execute)
+(provide on-halt)
 (provide run-alu-operation)
 
 ; Data
@@ -21,7 +22,8 @@
 
 ; World
 
-(define status -2)
+(define STATUS-OFF -1)
+(define status STATUS-OFF)
 
 (define-struct world [r0 r1 r2 r3 a b c op status])
 
@@ -35,8 +37,8 @@
   (next-status status)
   status)
 
-(define (on-halt w)
-  (set! status -2))
+(define (on-halt _)
+  (set! status STATUS-OFF))
 
 (define (run-alu-operation op a b)
   (cond
@@ -48,8 +50,7 @@
 
 ; Status
 
-
 (define (next-status s)
   (cond
-    [(= s 4) (set! status -2)]
+    [(= s 4) (set! status STATUS-OFF)]
     [else (set! status (add1 s))]))

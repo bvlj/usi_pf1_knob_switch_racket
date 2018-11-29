@@ -107,8 +107,13 @@
   (define exec-btn (new button%
                         [parent btns-panel]
                         [label "Execute"]
-                        [callback (lambda (b e)
-                                     (exec-btn-callback e))]))
+                        [callback (lambda (b e) (exec-btn-callback #f))]))
+
+  ; Halth
+  (define halt-btn (new button%
+                        [parent btns-panel]
+                        [label "Halt"]
+                        [callback (lambda (b e) (on-halt #f))]))
 
   ; World-builder function
   (define (exec-btn-callback _)
@@ -120,6 +125,7 @@
          [(= status 3) (set-status-3 0)]
          [(= status 4) (set-status-4 0)])))
 
+  ; Computer status
   (define (set-status-0 world)
     (send a-bus set-value (get-register-value (send a-bus-addr get-selection)))
     (send b-bus set-value (get-register-value (send b-bus-addr get-selection))))
@@ -141,6 +147,7 @@
     (let [(register (get-register (send c-bus-addr get-selection)))]
      (send register set-value (send c-bus get-value))))
 
+  ; Registers utils
   (define (get-register-value v)
     (let [(register (get-register v))]
       (if (boolean? register) 0 (send register get-value))))
@@ -155,7 +162,6 @@
 
   ; Show the window
   (send root show #t))
-
 
 (define (string?->number v)
   (if (number? v) v
