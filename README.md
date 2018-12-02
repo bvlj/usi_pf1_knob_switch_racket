@@ -2,22 +2,24 @@
 
 # Knob and Switch computer in DrRacket
 
+Our idea was to create a Program that imitates the _"Knob and Switch Computer"_ that we have known in CA.
+
 ## Team
 
 * Bevilacqua Joey
 * Brunner Nicola
 
+
 ## Roadmap
 
-Our Idea was to create a Program that imitates the _"Knob and Switch Computer"_ that we have known in CA.
+### Done
 
-1. First thing we have done, was to inspect the original _"Knob and Switch Computer"_ and analyse it.
-
-2. Second we have built the graphic user interface, using **Racket/gui**.
-
-3. We have implemented the basic Datapath witch includes the Buses, Registers and Switches.
+1. Create a graphical user interface using **racket/gui**
+2. Implement the basic Datapath which includes the Buses, Registers and Switches
+3. Full-cycle and per-step execution
 
 ### To do
 
-We are working on the Memory (to store and read data), on the automatic execution and maybe on a stepper.
-We also have planned to make a Microinstruction Interpreter, for executing a Microprogram from a .csv file.
+4. Memory support (and visualization)
+5. MicroInstructions interpreter to execute a MicroProgram from a given file
+6. Custom speed for execution

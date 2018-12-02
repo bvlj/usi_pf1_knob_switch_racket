@@ -107,16 +107,16 @@
   (define exec-btn (new button%
                         [parent btns-panel]
                         [label "Execute"]
-                        [callback (lambda (b e) (exec-btn-callback #f))]))
+                        [callback (lambda (b e) (exec-animate #f))]))
 
   ; Halth
-  (define halt-btn (new button%
-                        [parent btns-panel]
-                        [label "Halt"]
-                        [callback (lambda (b e) (on-halt #f))]))
+  (define stepper-btn (new button%
+                           [parent btns-panel]
+                           [label "Next step"]
+                           [callback (lambda (b e) (exec-step #f))]))
 
   ; World-builder function
-  (define (exec-btn-callback _)
+  (define (exec-step _)
     (let [(status (on-execute 0))]
        (cond
          [(= status 0) (set-status-0 0)]
@@ -125,7 +125,24 @@
          [(= status 3) (set-status-3 0)]
          [(= status 4) (set-status-4 0)])))
 
-  ; Computer status
+  (define (exec-animate _)
+    ; Disable the btns
+    (send btns-panel enable #f)
+    ; Start the animation
+    (set-status-0 0)
+    (sleep 1)
+    (set-status-1 0)
+    (sleep 1)
+    (set-status-2 0)
+    (sleep 1)
+    (set-status-3 0)
+    (sleep 1)
+    (set-status-4 0)
+    (sleep 1)
+    ; Re-enable the btns
+    (send btns-panel enable #t))
+
+
   (define (set-status-0 world)
     (send a-bus set-value (get-register-value (send a-bus-addr get-selection)))
     (send b-bus set-value (get-register-value (send b-bus-addr get-selection))))
