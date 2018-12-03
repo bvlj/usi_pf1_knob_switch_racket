@@ -94,7 +94,7 @@
            2
            "run-alu-operation and failed")
 (check-eq? (run-alu-operation 4  1  2)
-           2
+           0
            "run-alu-operation unexpected failed")
 ; next-status
 (next-status 1)
