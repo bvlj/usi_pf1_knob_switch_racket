@@ -7,4 +7,4 @@ before_install:
 
 script:
  - /usr/racket/bin/raco make main.rkt
- - /usr/racket/bin/raco test -x .
+ - /usr/racket/bin/raco test main.rkt
