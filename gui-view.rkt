@@ -7,12 +7,12 @@
 (define (gui-main)
   ; Root frame
   (define root (new frame%
-                     [label "Knob and Switch computer"]
-                     [width 400]
-                     [height 400]))
+                    [label "Knob and Switch computer"]
+                    [width 400]
+                    [height 400]))
   ; Root panels
   (define main-panel (new horizontal-panel%
-                             [parent root]))
+                          [parent root]))
   ; Panel for the main UI
   (define working-panel (new vertical-panel%
                              [parent main-panel]))
@@ -43,7 +43,7 @@
                          [parent middle-panel]
                          [label "ALU"]))
   (define ab-bus-panel (new vertical-panel%
-                           [parent middle-panel]))
+                            [parent middle-panel]))
   ; Bottom panels
   (define btns-panel (new horizontal-panel%
                           [parent bottom-panel]))
@@ -66,13 +66,13 @@
                         [init-value "0"]))
   ; AB Bus Address
   (define a-bus-addr (new choice%
-                              [parent ab-bus-addr-panel]
-                              [label "A Bus Address"]
-                              [choices LIST-OF-REGISTERS]))
+                          [parent ab-bus-addr-panel]
+                          [label "A Bus Address"]
+                          [choices LIST-OF-REGISTERS]))
   (define b-bus-addr (new choice%
                           [parent ab-bus-addr-panel]
-                              [label "B Bus Address"]
-                              [choices LIST-OF-REGISTERS]))
+                          [label "B Bus Address"]
+                          [choices LIST-OF-REGISTERS]))
   ; C Bus Address
   (define c-bus-addr (new choice%
                           [parent c-bus-addr-panel]
@@ -169,12 +169,12 @@
   ; World-builder function
   (define (exec-step)
     (let [(status (on-execute 0))]
-       (cond
-         [(= status 0) (set-status-0 0)]
-         [(= status 1) (set-status-1 0)]
-         [(= status 2) (set-status-2 0)]
-         [(= status 3) (set-status-3 0)]
-         [(= status 4) (set-status-4 0)])))
+      (cond
+        [(= status 0) (set-status-0 0)]
+        [(= status 1) (set-status-1 0)]
+        [(= status 2) (set-status-2 0)]
+        [(= status 3) (set-status-3 0)]
+        [(= status 4) (set-status-4 0)])))
 
   (define (exec-animate)
     ; Disable the btns
@@ -191,15 +191,13 @@
   (define (load-program)
     (memory-reset)
     (memory-load-microprogram "test.csv")
-    (exec-program)
-  )
+    (exec-program))
 
   (define (exec-program)
     (cond [(not (is-off?))
-      (send memory-display set-label (memory-dump memory "" 0))
-      (parse-microinstruction (get-current-memory-instruction))
-      (exec-program)
-      ]))
+           (send memory-display set-label (memory-dump memory "" 0))
+           (parse-microinstruction (get-current-memory-instruction))
+           (exec-program)]))
 
   (define (set-status-0 world)
     (send a-bus set-value (get-register-value (send a-bus-addr get-selection)))
@@ -211,10 +209,11 @@
 
   (define (set-status-2 world)
     (cond
-      [(send alu-enabler get-value) (send alu-c-value set-value
-          (number->string (run-alu-operation (send alu-op get-selection)
-                                             (string?->number (send alu-a-value get-value))
-                                             (string?->number (send alu-b-value get-value)))))]))
+      [(send alu-enabler get-value)
+       (send alu-c-value set-value
+             (number->string (run-alu-operation (send alu-op get-selection)
+                                                (string?->number (send alu-a-value get-value))
+                                                (string?->number (send alu-b-value get-value)))))]))
 
   (define (set-status-3 world)
     (cond
@@ -224,8 +223,8 @@
 
   (define (set-status-4 world)
     (cond [(send c-bus-enabler get-value)
-      (send (get-register (send c-bus-addr get-selection))
-            set-value (send c-bus get-value))]))
+           (send (get-register (send c-bus-addr get-selection))
+                 set-value (send c-bus get-value))]))
 
   ; Registers utils
   (define (get-register-value v)
@@ -264,8 +263,8 @@
                     c-bus-enabler #t)
       (assembly-load c-bus-addr reg-position
                      memory-bus mem-position)
-      (assembly-after #f))
-      (exec-animate))
+      (assembly-after #f)
+      (exec-animate)))
 
   (define (run-store instr)
     (let [(reg-position (get-instr-value instr 1 #t))

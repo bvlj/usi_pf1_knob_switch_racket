@@ -135,31 +135,31 @@
 ; return a string containing the memory contents
 (define (memory-dump vec str count)
   (if (= (vector-length vec) 0)
-    str
-    (memory-dump (vector-drop vec 1)
-                 (string-append str
-                                (number->string (memory-value-executable (vector-ref vec 0)))
-                                "\t"
-                                (number?->string (memory-value-content (vector-ref vec 0)))
-                                "\n")
-                 (add1 count))))
+      str
+      (memory-dump (vector-drop vec 1)
+                   (string-append str
+                                  (number->string (memory-value-executable (vector-ref vec 0)))
+                                  "\t"
+                                  (number?->string (memory-value-content (vector-ref vec 0)))
+                                  "\n")
+                   (add1 count))))
 
 ; get-current-memory-instruction: -> String
 (define (get-current-memory-instruction)
   (if (= status STATUS-HALT)
-    ; OFF
-    "HALT"
-    ; ON
-    (if (< program-counter (vector-length memory))
-      ; Valid PC
-      (let [(mem-val (vector-ref memory program-counter))]
-        (if (= (memory-value-executable mem-val) 1)
-          ; Executable
-          (memory-value-content mem-val)
-          ; Data
-          "data"))
-      ; Invalid PC
-      (on-invalid-pc))))
+      ; OFF
+      "HALT"
+      ; ON
+      (if (< program-counter (vector-length memory))
+          ; Valid PC
+          (let [(mem-val (vector-ref memory program-counter))]
+            (if (= (memory-value-executable mem-val) 1)
+                ; Executable
+                (memory-value-content mem-val)
+                ; Data
+                "data"))
+          ; Invalid PC
+          (on-invalid-pc))))
 
 (define (on-invalid-pc)
   (set! status STATUS-HALT)
@@ -172,8 +172,8 @@
 (define (csv-list->memory list)
   (cond
     [(not (empty? list))
-          (csv-line->memory-value (first list))
-          (csv-list->memory (rest list))]))
+     (csv-line->memory-value (first list))
+     (csv-list->memory (rest list))]))
 
 ; Assembly interpreter
 
@@ -201,7 +201,6 @@
 ; Set the memory bus to the given value and store it
 ; onto the given register
 (define (assembly-load reg reg-position mem-bus mem-position)
-  ; 0 1 0 1
   (send mem-bus set-value (number?->string (memory-get-content mem-position)))
   (send reg set-selection reg-position))
 
@@ -211,7 +210,6 @@
 ; Store the given bus value to the given memory address
 ; through its bus
 (define (assembly-store reg reg-position alu mem-position)
-  ; 1 0 1 0
   (send reg set-selection reg-position)
   (set! memory-selector mem-position)
   (send alu set-selection 4))
@@ -223,7 +221,6 @@
 ; and store the result to the destination bus (results in a copy of the original
 ; bus value)
 (define (assembly-move a a-position c c-position alu)
-  ; 1 0 0 1
   (send a set-selection a-position)
   (send c set-selection c-position)
   (send alu set-selection 4))
@@ -237,7 +234,6 @@
 ; Set the alu operation and the bus so that the specified
 ; operation is executed and store it to a given register
 (define (assembly-alu-operation alu alu-op a a-position b b-position c c-position)
-  ; 1 0 0 1
   (send alu set-selection alu-op)
   (send a set-selection a-position)
   (send b set-selection b-position)
@@ -248,25 +244,23 @@
 ;
 ; Set the program counter to the given value
 (define (assembly-branch mem-position)
-    ; 0 0 0 0
-    (set! program-counter mem-position))
+  (set! program-counter mem-position))
 
 ; assembly-bzero: Alu Register MemPosition
 ;    BZERO MEM
 ;
 ; Set the program counter to the given value if the alu result was 0
 (define (assembly-bzero alu-result mem-position)
-  ; 0 0 0 0
-  (cond [(= (string?->number (send alu-result get-value)) 0)
-            (assembly-branch mem-position)]))
+  (cond [(= (string?->number alu-result) 0)
+         (assembly-branch mem-position)]))
 
 (define (assembly-bneg alu-result mem-position)
-  ; 0 0 0 0
-  (cond [(< (string?->number (send alu-result get-value)) 0)
-            (assembly-branch mem-position)]))
+  (cond [(< (string?->number alu-result) 0)
+         (assembly-branch mem-position)]))
 
 (define (assembly-halt)
   (set! status -2))
+
 ; Status
 
 ; Increase the status or eventually reset it
@@ -279,11 +273,11 @@
 
 (define (string?->number v)
   (if (number? v) v
-                  (if (string? v) (string->number v) 0)))
+      (if (string? v) (string->number v) 0)))
 
 (define (number?->string v)
   (if (string? v) v
-                  (if (number? v) (number->string v) "")))
+      (if (number? v) (number->string v) "")))
 
 (define (bool->string v)
   (if (eqv? v #t) "true" "false"))
@@ -292,7 +286,7 @@
 (define (get-instr-value inst position is-register)
   (let [(l (string-split inst))]
     (string->number (if (eqv? is-register #t) (substring (list-ref l position) 1 2)
-                                      (list-ref l position)))))
+                        (list-ref l position)))))
 
 ; Unit tests
 
