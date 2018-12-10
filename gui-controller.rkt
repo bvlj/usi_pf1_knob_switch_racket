@@ -8,17 +8,10 @@
 (provide LIST-OF-REGISTERS)
 (provide LIST-OF-ALU-OPERATIONS)
 
-(provide world)
-(provide build-world)
-
 (provide memory)
-
-(provide memory-value)
-(provide memory-value-content)
 
 (provide memory-reset)
 (provide memory-load-microprogram)
-(provide memory-get-content)
 (provide memory-dump)
 (provide memory-write)
 
@@ -42,9 +35,6 @@
 (provide string-prefix?)
 (provide get-instr-value)
 
-; STOPSHIP TODO: hide me
-(provide program-counter)
-
 ; Data
 
 ; List of available registers
@@ -59,26 +49,12 @@
 ; A status is an Number
 (define status STATUS-OFF)
 
-; A world is a (make-world Number Number Number Number
-;                          String String String Number Number)
-; Where r0, r1, r2 and r3 are the values assigned to the given registers
-;       a b c are the bus addresses (reference to the register)
-;       op is the ALU operation
-;       status is the current execution step
-(define-struct world [r0 r1 r2 r3 a b c op status])
-
-; Public world builder
-; status is handled internally
-(define (build-world r0 r1 r2 r3 a b c op)
-  (make-world r0 r1 r2 r3 a b c op status))
-
-
 ; Callbacks
 
 ; on-execute -> Number
 ; Execution callback.
 ; Move to the next status and return it
-(define (on-execute _)
+(define (on-execute)
   (next-status status)
   status)
 
@@ -279,9 +255,6 @@
   (if (string? v) v
       (if (number? v) (number->string v) "")))
 
-(define (bool->string v)
-  (if (eqv? v #t) "true" "false"))
-
 ; get-instr-value: String Number Boolean -> Number
 (define (get-instr-value inst position is-register)
   (let [(l (string-split inst))]
@@ -290,14 +263,9 @@
 
 ; Unit tests
 
-; build-world
-(set! status 2)
-(check-eq? (world-status (build-world 1 2 3 4 "R0" "R2" "R3" 0))
-           2
-           "build-world test failed")
 ; on-execute
 (set! status STATUS-OFF)
-(check-eq? (on-execute #f)
+(check-eq? (on-execute)
            0
            "on-execute failed")
 ; run-alu-operation

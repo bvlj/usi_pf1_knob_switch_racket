@@ -168,23 +168,23 @@
 
   ; World-builder function
   (define (exec-step)
-    (let [(status (on-execute 0))]
+    (let [(status (on-execute))]
       (cond
-        [(= status 0) (set-status-0 0)]
-        [(= status 1) (set-status-1 0)]
-        [(= status 2) (set-status-2 0)]
-        [(= status 3) (set-status-3 0)]
-        [(= status 4) (set-status-4 0)])))
+        [(= status 0) (set-status-0)]
+        [(= status 1) (set-status-1)]
+        [(= status 2) (set-status-2)]
+        [(= status 3) (set-status-3)]
+        [(= status 4) (set-status-4)])))
 
   (define (exec-animate)
     ; Disable the btns
     (send btns-panel enable #f)
     ; Start the animation
-    (set-status-0 0)
-    (set-status-1 0)
-    (set-status-2 0)
-    (set-status-3 0)
-    (set-status-4 0)
+    (set-status-0)
+    (set-status-1)
+    (set-status-2)
+    (set-status-3)
+    (set-status-4)
     ; Re-enable the btns
     (send btns-panel enable #t))
 
@@ -199,15 +199,15 @@
            (parse-microinstruction (get-current-memory-instruction))
            (exec-program)]))
 
-  (define (set-status-0 world)
+  (define (set-status-0)
     (send a-bus set-value (get-register-value (send a-bus-addr get-selection)))
     (send b-bus set-value (get-register-value (send b-bus-addr get-selection))))
 
-  (define (set-status-1 world)
+  (define (set-status-1)
     (send alu-a-value set-value (send a-bus get-value))
     (send alu-b-value set-value (send b-bus get-value)))
 
-  (define (set-status-2 world)
+  (define (set-status-2)
     (cond
       [(send alu-enabler get-value)
        (send alu-c-value set-value
@@ -215,13 +215,13 @@
                                                 (string?->number (send alu-a-value get-value))
                                                 (string?->number (send alu-b-value get-value)))))]))
 
-  (define (set-status-3 world)
+  (define (set-status-3)
     (cond
       [(send memory-read-enabler get-value) (send c-bus set-value (send memory-bus get-value))]
       [(send alu-enabler get-value) (send c-bus set-value (send alu-c-value get-value))]
       [(send memory-write-enabler get-value) (memory-write (send alu-c-value get-value))]))
 
-  (define (set-status-4 world)
+  (define (set-status-4)
     (cond [(send c-bus-enabler get-value)
            (send (get-register (send c-bus-addr get-selection))
                  set-value (send c-bus get-value))]))
