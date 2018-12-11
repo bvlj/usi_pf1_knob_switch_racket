@@ -1,5 +1,6 @@
 #lang racket
 
+(require racket/block)
 (require rackunit)
 (require 2htdp/batch-io)
 
@@ -86,8 +87,11 @@
 ; Memory size
 (define MEMORY-SIZE 32)
 
+; Default memory value
+(define MEMORY-VALUE-EMPTY (make-memory-value 0 0))
+
 ; Default content of the Memory (empty)
-(define MEMORY-EMPTY (make-vector MEMORY-SIZE (make-memory-value 0 0)))
+(define MEMORY-EMPTY (make-vector MEMORY-SIZE MEMORY-VALUE-EMPTY))
 
 ; A Memory is a Vector<MemoryValue>
 (define memory MEMORY-EMPTY)
@@ -108,7 +112,7 @@
 (define (memory-reset)
   (set! program-counter 0)
   (set! memory-selector 0)
-  (set! memory MEMORY-EMPTY))
+  (vector-fill! memory MEMORY-VALUE-EMPTY))
 
 ; memory-write -> #<void>
 ; Writes a value to the memory to the position given by memory-selector
@@ -308,6 +312,33 @@
 (check-eq? (on-execute)
            0
            "on-execute failed")
+; is-off?
+(set! status STATUS-HALT)
+(check-eq? (is-off?)
+           #t
+           "is-off? true failed")
+(set! status 0)
+(check-eq? (is-off?)
+           #f
+           "is-off? false failed")
+; memory-insert
+(memory-insert "HELLO" 1 1)
+(check-eq? (memory-value-content (vector-ref memory 1))
+           "HELLO"
+           "memory-insert failed")
+; memory-reset
+(memory-insert "HELLO" 1 3)
+(memory-reset)
+(check-eq? (memory-value-content (vector-ref memory 1))
+        0
+        "memory-reset failed")
+; memory-write
+(memory-reset)
+(set! memory-selector 2)
+(memory-write 5)
+(check-eq? (memory-value-content (vector-ref memory memory-selector))
+           5
+           "memory-write failed")
 ; run-alu-operation
 (check-eq? (run-alu-operation 0  1  2)
            3
