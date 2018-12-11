@@ -11,6 +11,7 @@
 (provide memory)
 
 (provide reset)
+(provide memory-write)
 (provide memory-load-microprogram)
 (provide memory-dump)
 (provide memory-get-content)
@@ -232,67 +233,133 @@
                         (list-ref l position)))))
 
 ; Unit tests
+(module+ test
+  (require rackunit)
 
-; on-execute
-(set! status STATUS-OFF)
-(check-eq? (on-execute)
-           0
-           "on-execute failed")
-; is-off?
-(set! status STATUS-HALT)
-(check-eq? (is-off?)
-           #t
-           "is-off? true failed")
-(set! status 0)
-(check-eq? (is-off?)
-           #f
-           "is-off? false failed")
-; memory-insert
-(memory-insert "HELLO" 1 1)
-(check-eq? (memory-value-content (vector-ref memory 1))
-           "HELLO"
-           "memory-insert failed")
-; reset
-(memory-insert "HELLO" 1 3)
-(reset)
-(check-eq? (memory-value-content (vector-ref memory 1))
-        0
-        "reset failed")
-; memory-write
-(reset)
-(set! memory-selector 2)
-(memory-write 5)
-(check-eq? (memory-value-content (vector-ref memory memory-selector))
-           5
-           "memory-write failed")
-; run-alu-operation
-(check-eq? (run-alu-operation 0  1  2)
-           3
-           "run-alu-operation + failed")
-(check-eq? (run-alu-operation 1  2  1)
-           1
-           "run-alu-operation - failed")
-(check-eq? (run-alu-operation 2 32 12)
-           44
-           "run-alu-operation or failed")
-(check-eq? (run-alu-operation 3 3 2)
-           2
-           "run-alu-operation and failed")
-(check-eq? (run-alu-operation 4  1  2)
-           1
-           "run-alu-operation a failed")
-(check-eq? (run-alu-operation 5  1  2)
-           0
-           "run-alu-operation unexpected failed")
-; next-status
-(next-status 1)
-(check-eq? status
-           2
-           "next-status default failed")
-(next-status 4)
-(check-eq? status
-           -1
-           "next-status reset failed")
-
-; Reset the status for real-world execution
-(set! status STATUS-OFF)
+  ; on-execute
+  (reset)
+  (check-eq? (on-execute)
+             0
+             "on-execute failed")
+  ; is-off?
+  (halt-execution)
+  (check-eq? (is-off?)
+             #t
+             "is-off? true failed")
+  (reset)
+  (check-eq? (is-off?)
+             #f
+             "is-off? false failed")
+  ; run-alu-operation
+  (check-eq? (run-alu-operation 0  1  2)
+             3
+             "run-alu-operation + failed")
+  (check-eq? (run-alu-operation 1  2  1)
+             1
+             "run-alu-operation - failed")
+  (check-eq? (run-alu-operation 2 32 12)
+             44
+             "run-alu-operation or failed")
+  (check-eq? (run-alu-operation 3 3 2)
+             2
+             "run-alu-operation and failed")
+  (check-eq? (run-alu-operation 4  1  2)
+             1
+             "run-alu-operation a failed")
+  (check-eq? (run-alu-operation 5  1  2)
+             0
+             "run-alu-operation unexpected failed")
+  ; memory-insert
+  (memory-insert "HELLO" 1 1)
+  (check-eq? (memory-value-content (vector-ref memory 1))
+             "HELLO"
+             "memory-insert failed")
+  ; reset
+  (memory-insert "HELLO" 1 3)
+  (reset)
+  (check-eq? (memory-value-content (vector-ref memory 1))
+          0
+          "reset failed")
+  ; memory-write
+  (reset)
+  (memory-selector-set 2)
+  (memory-write 5)
+  (check-eq? (memory-value-content (vector-ref memory memory-selector))
+             5
+             "memory-write failed")
+  ; memory-selector-set
+  (reset)
+  (memory-selector-set 13)
+  (check-eq? memory-selector
+             13
+             "memory-selector-set failed")
+  ; program-counter-set
+  (reset)
+  (program-counter-set 18)
+  (check-eq? program-counter
+             18
+             "program-counter-set failed")
+  ; get-current-memory-instruction
+  (reset)
+  (memory-insert "LOAD R0 1" 1 0)
+  (memory-insert 12 0 1)
+  (program-counter-set 0)
+  (check-eq? (get-current-memory-instruction)
+             "LOAD R0 1"
+             "get-current-memory-instruction instruction [0] failed")
+  (program-counter-set 1)
+  (check-eq? (get-current-memory-instruction)
+             "NOP"
+             "get-current-memory-instruction data [1] failed")
+  (program-counter-set 100)
+  (check-eq? (get-current-memory-instruction)
+             ""
+             "get-current-memory-instruction out of bounds failed [1/2]")
+  (check-eq? status
+             STATUS-HALT
+             "get-current-memory-instruction out of bounds failed [2/2]")
+  ; increase-program-counter
+  (reset)
+  (program-counter-set 18)
+  (increase-program-counter)
+  (check-eq? program-counter
+             19
+             "increase-program-counter failed")
+  ; halt-execution
+  (reset)
+  (halt-execution)
+  (check-eq? status
+             STATUS-HALT
+             "halt-execution failed")
+  ; next-status
+  (next-status 1)
+  (check-eq? status
+             2
+             "next-status default failed")
+  (next-status 4)
+  (check-eq? status
+             -1
+             "next-status reset failed")
+  ; string?->number
+  (check-eq? (string?->number "123")
+             123
+             "string?->number string failed")
+  (check-eq? (string?->number 123)
+             123
+             "string?->number number failed")
+  number?->string
+  (check-equal? (number?->string 4)
+                "4"
+                "number?->string number failed")
+  (check-eq? (number?->string "123")
+             "123"
+             "number?->string string failed")
+  ; get-instr-value
+  (check-eq? (get-instr-value "LOAD R0 20" 1 #t)
+             0
+             "get-instr-value register failed")
+  (check-eq? (get-instr-value "LOAD R0 20" 2 #f)
+             20
+             "get-instr-value memory failed")
+  ; Reset for real-world execution
+  (reset))
