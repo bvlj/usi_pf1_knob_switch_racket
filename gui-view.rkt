@@ -207,7 +207,7 @@
            (exec-program)]))
 
   (define (print-memory)
-    (send memory-display set-value (memory-dump memory "" 0)))
+    (send memory-display set-value (memory-dump memory "")))
 
   (define (set-status-0)
     (send a-bus set-value (get-register-value (send a-bus-addr get-selection)))

@@ -58,6 +58,8 @@
   (next-status status)
   status)
 
+; is-off? -> Boolean
+; Returns false if the program has halted the execution
 (define (is-off?)
   (= status STATUS-HALT))
 
@@ -83,33 +85,49 @@
 
 ; Memory size
 (define MEMORY-SIZE 32)
+
+; Default content of the Memory (empty)
 (define MEMORY-EMPTY (make-vector MEMORY-SIZE (make-memory-value 0 0)))
+
+; A Memory is a Vector<MemoryValue>
 (define memory MEMORY-EMPTY)
 
 ; For reading the file
 (define memory-selector 0)
-; PC
+
+; PC (Program Counter)
 (define program-counter 0)
 
+; memory-insert: Instruction Number Number -> #<void>
+; Inserts a MemoryValue to the memory vector in a given position
 (define (memory-insert instruction executable position)
   (vector-set! memory position (make-memory-value (string?->number executable) instruction)))
 
+; memory-reset -> #<void>
+; resets the memory content, program-counter and memory-selector
 (define (memory-reset)
   (set! program-counter 0)
   (set! memory-selector 0)
   (set! memory MEMORY-EMPTY))
 
+; memory-write -> #<void>
+; Writes a value to the memory to the position given by memory-selector
 (define (memory-write data)
   (cond [(> memory-selector -1) (memory-insert (string?->number data) 0 memory-selector)]))
 
+; memory-load-microprogram: String -> #<void>
+; Given a file path, reads the .csv file and loads it to the memory
 (define (memory-load-microprogram path)
   (csv-list->memory (read-csv-file path)))
 
+; memory-get-content: Number -> Number
+; Given a position returns the content of that position in memory
 (define (memory-get-content position)
   (string?->number (memory-value-content (vector-ref memory position))))
 
-; return a string containing the memory contents
-(define (memory-dump vec str count)
+; memory-dump: Vector<MemoryValue> String -> String
+; Return a string containing the memory contents
+(define (memory-dump vec str)
   (if (= (vector-length vec) 0)
       str
       (memory-dump (vector-drop vec 1)
@@ -117,10 +135,13 @@
                                   (number->string (memory-value-executable (vector-ref vec 0)))
                                   "  "
                                   (number?->string (memory-value-content (vector-ref vec 0)))
-                                  "\n")
-                   (add1 count))))
+                                  "\n"))))
 
-; get-current-memory-instruction: -> String
+; get-current-memory-instruction -> String
+; Returns the current memory instruction:
+;      - HALT: if the execution has been stopped
+;      - NOP: if the content is not an Instruction
+;      - else: returns the Instruction
 (define (get-current-memory-instruction)
   (if (= status STATUS-HALT)
       ; OFF
@@ -133,18 +154,24 @@
                 ; Executable
                 (memory-value-content mem-val)
                 ; Data
-                "data"))
+                "NOP"))
           ; Invalid PC
           (on-invalid-pc))))
 
+; on-invalid-pc -> String
+; Set the status to HALT when the program-counter is invalid
 (define (on-invalid-pc)
   (set! status STATUS-HALT)
   "")
 
+; csv-line->memory-value: List<String> -> #<void>
+; Insterts to the memory the content of the csv line
 (define (csv-line->memory-value line)
   (memory-insert (second line) (first line) memory-selector)
   (set! memory-selector (add1 memory-selector)))
 
+; csv-list->memory: List<List<String>> -> #<void>
+; Is a recursive function which helps reading the .csv file
 (define (csv-list->memory list)
   (cond
     [(not (empty? list))
@@ -239,6 +266,7 @@
 
 ; Status
 
+; next-status: Number -> #<void>
 ; Increase the status or eventually reset it
 (define (next-status s)
   (cond
@@ -247,15 +275,27 @@
 
 ; Utils
 
+; string?->number: String? -> Number
+; where String? is one of:
+;     - String
+;     - Number
+; Converts a potentially String to a Number
 (define (string?->number v)
   (if (number? v) v
       (if (string? v) (string->number v) 0)))
 
+; number?->string: Number? -> String
+; where Number? is one of:
+;     - String
+;     - Number
+; Converts a potentially Number to a String
 (define (number?->string v)
   (if (string? v) v
       (if (number? v) (number->string v) "")))
 
 ; get-instr-value: String Number Boolean -> Number
+; Returs the register number if the instruction contains a register
+; otherwise returns the value
 (define (get-instr-value inst position is-register)
   (let [(l (string-split inst))]
     (string->number (if (eqv? is-register #t) (substring (list-ref l position) 1 2)
