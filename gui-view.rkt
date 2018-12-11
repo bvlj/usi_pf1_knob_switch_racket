@@ -105,10 +105,11 @@
                           [parent memory-panel]
                           [label "Memory Bus"]
                           [init-value "0"]))
-  (define memory-display (new message%
+  (define memory-display (new text-field%
                               [parent memory-display-panel]
-                              [auto-resize #t]
-                              [label "(empty)"]))
+                              [label "Memory"]
+                              [init-value "(empty)"]
+                              [style (cons 'multiple '())]))
   ; ALU panels
   (define alu-ab-panel (new horizontal-panel%
                             [parent alu-panel]))
@@ -180,24 +181,33 @@
     ; Disable the btns
     (send btns-panel enable #f)
     ; Start the animation
+    (sleep 0.2)
     (set-status-0)
+    (sleep 0.2)
     (set-status-1)
+    (sleep 0.2)
     (set-status-2)
+    (sleep 0.2)
     (set-status-3)
+    (sleep 0.2)
     (set-status-4)
+    (sleep 0.2)
     ; Re-enable the btns
     (send btns-panel enable #t))
 
   (define (load-program)
     (memory-reset)
     (memory-load-microprogram "test.csv")
+    (print-memory)
     (exec-program))
 
   (define (exec-program)
     (cond [(not (is-off?))
-           (send memory-display set-label (memory-dump memory "" 0))
            (parse-microinstruction (get-current-memory-instruction))
            (exec-program)]))
+
+  (define (print-memory)
+    (send memory-display set-value (memory-dump memory "" 0)))
 
   (define (set-status-0)
     (send a-bus set-value (get-register-value (send a-bus-addr get-selection)))
@@ -277,6 +287,7 @@
                       alu-op mem-position)
       (assembly-after #f)
       (memory-write (get-register-value reg-position))
+      (print-memory)
       (exec-animate)))
 
   (define (run-move instr)

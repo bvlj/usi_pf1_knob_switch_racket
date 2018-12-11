@@ -115,7 +115,7 @@
       (memory-dump (vector-drop vec 1)
                    (string-append str
                                   (number->string (memory-value-executable (vector-ref vec 0)))
-                                  "\t"
+                                  "  "
                                   (number?->string (memory-value-content (vector-ref vec 0)))
                                   "\n")
                    (add1 count))))
