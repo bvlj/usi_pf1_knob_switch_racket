@@ -196,7 +196,7 @@
     (send btns-panel enable #t))
 
   (define (load-program)
-    (memory-reset)
+    (reset)
     (memory-load-microprogram "test.csv")
     (print-memory)
     (exec-program))
@@ -242,11 +242,11 @@
       (if (boolean? register) 0 (send register get-value))))
 
   (define (get-register v)
-    (cond
-      [(= v 0) r0-input]
-      [(= v 1) r1-input]
-      [(= v 2) r2-input]
-      [(= v 3) r3-input]
+    (case v
+      [(0) r0-input]
+      [(1) r1-input]
+      [(2) r2-input]
+      [(3) r3-input]
       [else #f]))
 
   (define (parse-microinstruction instr)
@@ -264,96 +264,118 @@
       [(string-prefix? instr "HALT") (run-halt)]
       [else (run-nop)]))
 
+  ; run-load: String -> #<void>
+  ;    LOAD REG MEM
+  ;
+  ; Set the memory bus to the given value and store it
+  ; onto the given register
   (define (run-load instr)
-    (let [(reg-position (get-instr-value instr 1 #t))
-          (mem-position (get-instr-value instr 2 #f))]
-      (assembly-pre alu-enabler #f
-                    memory-read-enabler #t
-                    memory-write-enabler #f
-                    c-bus-enabler #t)
-      (assembly-load c-bus-addr reg-position
-                     memory-bus mem-position)
-      (assembly-after #f)
-      (exec-animate)))
+    (run-pre #f #t #f #t)
 
+    (send c-bus-addr set-selection (get-instr-value instr 1 #t))
+    (send memory-bus set-value (number?->string (memory-get-content (get-instr-value instr 2 #f))))
+
+    (increase-program-counter)
+    (exec-animate))
+
+  ; run-store: String -> #<void>
+  ;    STORE REG MEM
+  ;
+  ; Store the given bus value to the given memory address
+  ; through its bus
   (define (run-store instr)
-    (let [(reg-position (get-instr-value instr 1 #t))
-          (mem-position (get-instr-value instr 2 #f))]
-      (assembly-pre alu-enabler #t
-                    memory-read-enabler #f
-                    memory-write-enabler #t
-                    c-bus-enabler #f)
-      (assembly-store c-bus-addr reg-position
-                      alu-op mem-position)
-      (assembly-after #f)
-      (memory-write (get-register-value reg-position))
-      (print-memory)
-      (exec-animate)))
+    (run-pre #t #f #t #f)
 
+    (send c-bus-addr set-selection (get-instr-value instr 1 #t))
+    (send alu-op set-selection 4)
+    (memory-selector-set (get-instr-value instr 2 #f))
+
+    (increase-program-counter)
+    (exec-animate)
+    (memory-write (get-register-value (get-instr-value instr 1 #t)))
+    (print-memory))
+
+  ; run-move: String -> #<void>
+  ;    MOVE REG-A REG-B
+  ;
+  ; Copy the value of a register to another
   (define (run-move instr)
-    (let [(a-position (get-instr-value instr 1 #t))
-          (b-position (get-instr-value instr 2 #t))]
-      (assembly-pre alu-enabler #t
-                    memory-read-enabler #f
-                    memory-write-enabler #f
-                    c-bus-enabler #t)
-      (assembly-move a-bus-addr a-position
-                     b-bus-addr b-position)
-      (assembly-after #f)
-      (exec-animate)))
+    (run-pre #t #f #f #t)
 
+    (send a-bus-addr set-selection (get-instr-value instr 1 #t))
+    (send c-bus-addr set-selection (get-instr-value instr 2 #t))
+    (send alu-op set-selection 4)
+
+    (increase-program-counter)
+    (exec-animate))
+
+  ; run-alu-op: String Number -> #<void>
+  ;
+  ;    ADD REG-A REG-B REG-C
+  ;    SUM REG-A REG-B REG-C
+  ;    OR  REG-A REG-B REG-C
+  ;    AND REG-A REG-B REG-C
+  ;
+  ; Set the alu operation and the bus so that the specified
+  ; operation is executed and store it to a given register
   (define (run-alu-op instr op)
-    (let [(a-position (get-instr-value instr 1 #t))
-          (b-position (get-instr-value instr 2 #t))
-          (c-position (get-instr-value instr 3 #t))]
-      (assembly-pre alu-enabler #t
-                    memory-read-enabler #f
-                    memory-write-enabler #f
-                    c-bus-enabler #t)
-      (assembly-alu-operation alu-op op
-                              a-bus-addr a-position
-                              b-bus-addr b-position
-                              c-bus-addr c-position)
-      (assembly-after #f)
-      (exec-animate)))
+    (run-pre #t #f #f #t)
 
+    (send alu-op set-selection op)
+    (send a-bus-addr set-selection (get-instr-value instr 1 #t))
+    (send b-bus-addr set-selection (get-instr-value instr 2 #t))
+    (send c-bus-addr set-selection (get-instr-value instr 3 #t))
+
+    (increase-program-counter)
+    (exec-animate))
+
+  ; run-branch: String -> #<void>
+  ;    BRANCH MEM
+  ;
+  ; Set the program counter to the given value
   (define (run-branch instr)
-    (let [(mem-position (get-instr-value instr 1 #f))
-          (alu-result (send alu-c-value get-value))]
-      (assembly-pre alu-enabler #f
-                    memory-read-enabler #f
-                    memory-write-enabler #f
-                    c-bus-enabler #f)
-      (assembly-branch mem-position)
-      (assembly-after #t)))
+    (program-counter-set (get-instr-value instr 1 #f)))
 
+  ; run-bzero: String -> #<void>
+  ;    BZERO MEM
   ;
+  ; Set the program counter to the given value if the alu result was 0
   (define (run-bzero instr)
-    (let [(mem-position (get-instr-value instr 1 #f))
-          (alu-result (send alu-c-value get-value))]
-      (assembly-pre alu-enabler #f
-                    memory-read-enabler #f
-                    memory-write-enabler #f
-                    c-bus-enabler #f)
-      (assembly-bzero mem-position alu-result)
-      (assembly-after #t)))
+    (cond [(= (string?->number (send alu-c-value get-value)) 0)
+             (program-counter-set (get-instr-value instr 1 #f))])
+    (exec-animate))
 
+  ; run-bneg: String -> #<void>
+  ;    BNEG MEM
   ;
+  ; Set the program counter to the given value if the alu result was less than 0
   (define (run-bneg instr)
-    (let [(mem-position (get-instr-value instr 1 #f))
-          (alu-result (send alu-c-value get-value))]
-      (assembly-pre alu-enabler #f
-                    memory-read-enabler #f
-                    memory-write-enabler #f
-                    c-bus-enabler #f)
-      (assembly-bneg mem-position alu-result)
-      (assembly-after #t)))
+    (cond [(< (string?->number (send alu-c-value get-value)) 0)
+             (program-counter-set (get-instr-value instr 1 #f))])
+    (exec-animate))
 
+  ; run-nop -> #<void>
+  ;    NOP
+  ;
+  ; Do nothing
   (define (run-nop)
-    (assembly-after #f))
+    (increase-program-counter))
 
+  ; run-halt -> #<void>
+  ;    HALT
+  ;
+  ; Halt the execution
   (define (run-halt)
-    (assembly-halt))
+    (halt-execution))
+
+  ; run-pre: Boolean Boolean Boolean Boolean -> #<void>
+  ;
+  ; Setup the circuits status before executing a cycle
+  (define (run-pre alu-status read-status write-status c-status)
+    (send alu-enabler set-value alu-status)
+    (send memory-read-enabler set-value read-status)
+    (send memory-write-enabler set-value write-status)
+    (send c-bus-enabler set-value c-status))
 
   ; Show the window
   (send root show #t))

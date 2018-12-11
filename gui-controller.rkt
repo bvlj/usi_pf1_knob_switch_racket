@@ -1,6 +1,5 @@
 #lang racket
 
-(require racket/block)
 (require rackunit)
 (require 2htdp/batch-io)
 
@@ -11,21 +10,15 @@
 
 (provide memory)
 
-(provide memory-reset)
+(provide reset)
 (provide memory-load-microprogram)
 (provide memory-dump)
-(provide memory-write)
+(provide memory-get-content)
+(provide memory-selector-set)
+(provide program-counter-set)
 
-(provide assembly-pre)
-(provide assembly-after)
-(provide assembly-load)
-(provide assembly-store)
-(provide assembly-move)
-(provide assembly-alu-operation)
-(provide assembly-branch)
-(provide assembly-bzero)
-(provide assembly-bneg)
-(provide assembly-halt)
+(provide halt-execution)
+(provide increase-program-counter)
 
 (provide on-execute)
 (provide is-off?)
@@ -33,6 +26,8 @@
 (provide get-current-memory-instruction)
 
 (provide string?->number)
+(provide number?->string)
+
 (provide string-prefix?)
 (provide get-instr-value)
 
@@ -107,9 +102,10 @@
 (define (memory-insert instruction executable position)
   (vector-set! memory position (make-memory-value (string?->number executable) instruction)))
 
-; memory-reset -> #<void>
+; reset -> #<void>
 ; resets the memory content, program-counter and memory-selector
-(define (memory-reset)
+(define (reset)
+  (set! status STATUS-OFF)
   (set! program-counter 0)
   (set! memory-selector 0)
   (vector-fill! memory MEMORY-VALUE-EMPTY))
@@ -136,10 +132,18 @@
       str
       (memory-dump (vector-drop vec 1)
                    (string-append str
-                                  (number->string (memory-value-executable (vector-ref vec 0)))
-                                  "  "
                                   (number?->string (memory-value-content (vector-ref vec 0)))
                                   "\n"))))
+
+; memory-selector-set: Number -> #<void>
+; Public memory-selector setter
+(define (memory-selector-set val)
+  (set! memory-selector val))
+
+; program-counter-set: Number -> #<void>
+; Public program-counter setter
+(define (program-counter-set val)
+  (set! program-counter val))
 
 ; get-current-memory-instruction -> String
 ; Returns the current memory instruction:
@@ -182,91 +186,13 @@
      (csv-line->memory-value (first list))
      (csv-list->memory (rest list))]))
 
-; Assembly interpreter
+; increase-program-counter -> #<void>
+; Increase the program-counter after a cycle execution
+(define (increase-program-counter)
+  (set! program-counter (add1 program-counter)))
 
-; assembly-pre: ...
-;
-; Setup the (en|dis)abled circuit parts for the assembly instruction
-(define (assembly-pre alu alu-status mem-read mem-read-status mem-write
-                      mem-write-status c-bus c-bus-status)
-  (send alu set-value alu-status)
-  (send mem-read set-value mem-read-status)
-  (send mem-write set-value mem-write-status)
-  (send c-bus set-value c-bus-status))
-
-; assembly-after: Boolean -> #<void>
-; Callback for instruction execution
-(define (assembly-after has-branched)
-  (cond [(not has-branched) (set! program-counter (add1 program-counter))]))
-
-; Assembly interpreter functions set up the world so that an execution
-; results in the required action
-
-; assembly-load: Register Number MemoryBus Number -> #<void>
-;    LOAD REG MEM
-;
-; Set the memory bus to the given value and store it
-; onto the given register
-(define (assembly-load reg reg-position mem-bus mem-position)
-  (send mem-bus set-value (number?->string (memory-get-content mem-position)))
-  (send reg set-selection reg-position))
-
-; assembly-store: Bus Number Bus Number Alu Number -> #<void>
-;    STORE REG MEM
-;
-; Store the given bus value to the given memory address
-; through its bus
-(define (assembly-store reg reg-position alu mem-position)
-  (send reg set-selection reg-position)
-  (set! memory-selector mem-position)
-  (send alu set-selection 4))
-
-; assembly-move: Bus Number Bus Number Alu -> #<void>
-;    MOVE REG-A REG-B
-;
-; Set the destination bus to 0, sum it with the original bus value
-; and store the result to the destination bus (results in a copy of the original
-; bus value)
-(define (assembly-move a a-position c c-position alu)
-  (send a set-selection a-position)
-  (send c set-selection c-position)
-  (send alu set-selection 4))
-
-; assembly-alu-operation ALU AluOperation BusAddr Number BusAddr Number
-;    ADD REG-A REG-B REG-C
-;    SUM REG-A REG-B REG-C
-;    OR  REG-A REG-B REG-C
-;    AND REG-A REG-B REG-C
-;
-; Set the alu operation and the bus so that the specified
-; operation is executed and store it to a given register
-(define (assembly-alu-operation alu alu-op a a-position b b-position c c-position)
-  (send alu set-selection alu-op)
-  (send a set-selection a-position)
-  (send b set-selection b-position)
-  (send c set-selection c-position))
-
-; assembly-branch: MemPosition
-;    BRANCH MEM
-;
-; Set the program counter to the given value
-(define (assembly-branch mem-position)
-  (set! program-counter mem-position))
-
-; assembly-bzero: Alu Register MemPosition
-;    BZERO MEM
-;
-; Set the program counter to the given value if the alu result was 0
-(define (assembly-bzero alu-result mem-position)
-  (cond [(= (string?->number alu-result) 0)
-         (assembly-branch mem-position)]))
-
-(define (assembly-bneg alu-result mem-position)
-  (cond [(< (string?->number alu-result) 0)
-         (assembly-branch mem-position)]))
-
-(define (assembly-halt)
-  (set! status -2))
+(define (halt-execution)
+  (set! status STATUS-HALT))
 
 ; Status
 
@@ -326,14 +252,14 @@
 (check-eq? (memory-value-content (vector-ref memory 1))
            "HELLO"
            "memory-insert failed")
-; memory-reset
+; reset
 (memory-insert "HELLO" 1 3)
-(memory-reset)
+(reset)
 (check-eq? (memory-value-content (vector-ref memory 1))
         0
-        "memory-reset failed")
+        "reset failed")
 ; memory-write
-(memory-reset)
+(reset)
 (set! memory-selector 2)
 (memory-write 5)
 (check-eq? (memory-value-content (vector-ref memory memory-selector))
