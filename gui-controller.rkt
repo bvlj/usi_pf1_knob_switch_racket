@@ -5,6 +5,18 @@
 
 ; Provide
 
+(provide (struct-out world)
+         world-get
+         world-set
+         world-r-set
+         world-in-bus-set
+         world-out-bus-set
+         world-mem-bus-set
+         world-alu-set
+         world-en-set
+         world-status-set
+         world-pc-set)
+
 (provide LIST-OF-REGISTERS)
 (provide LIST-OF-ALU-OPERATIONS)
 
@@ -16,7 +28,6 @@
 (provide memory-dump)
 (provide memory-get-content)
 (provide memory-selector-set)
-(provide program-counter-set)
 
 (provide halt-execution)
 (provide increase-program-counter)
@@ -44,7 +55,111 @@
 (define STATUS-HALT -2)
 ; Current status of execution
 ; A status is an Number
-(define status STATUS-OFF)
+;(define status STATUS-OFF)
+
+; World abstraction
+
+; A world is a (make-world Register Register Register Register
+;                          BusAddr BusAddr BusAddr MemBusAddr
+;                          AluOp
+;                          Boolean Boolean Boolean Boolean
+;                          Status ProgramCounter)
+; Where
+; - A Register is a Number that indicates the value contained in a register
+; - A BusAddr is the address of a register set to a bus
+; - A MemBusAddr is the memory bus address
+; - A AluOp determines which operation is being executed on the ALU
+; - A Status is a Number that determines the execution progress
+; - A ProgramCounter is a Number that contains the to-be-read/executed memory address
+(define-struct world [r0 r1 r2 r3
+                      a-bus b-bus c-bus mem-bus
+                      alu
+                      en-alu en-read en-write en-c
+                      status pc])
+
+; Abstraction world, used by the GUI components to read and save non-memory data
+(define w (make-world 0 0 0 0 0 0 0 0 0 #t #f #f #t STATUS-OFF 0))
+
+; world-get -> World
+; Get the current world
+(define (world-get) w)
+
+; world-set: World -> #<void>
+; Update the internal world holder
+(define (world-set new-world)
+  (set! w new-world))
+
+; world-r-set: Register Register Register Register -> World
+; Set the world registers values
+(define (world-r-set a b c d)
+  (make-world a b c d
+              (world-a-bus w) (world-b-bus w) (world-c-bus w) (world-mem-bus w)
+              (world-alu w) (world-en-alu w) (world-en-read w)
+              (world-en-write w) (world-en-c w) (world-status w)
+              (world-pc w)))
+
+; world-in-bus-set: BusAddr BusAddr -> World
+; Set the world input bus addresses
+(define (world-in-bus-set a b)
+  (make-world (world-r0 w) (world-r1 w) (world-r2 w) (world-r3 w)
+              a b (world-c-bus w) (world-mem-bus w)
+              (world-alu w) (world-en-alu w) (world-en-read w)
+              (world-en-write w) (world-en-c w) (world-status w)
+              (world-pc w)))
+
+; world-out-bus-set: BusAddr -> World
+; Set the world bus addresses
+(define (world-out-bus-set c)
+  (make-world (world-r0 w) (world-r1 w) (world-r2 w) (world-r3 w)
+              (world-a-bus w) (world-b-bus w) c (world-mem-bus w)
+              (world-alu w) (world-en-alu w) (world-en-read w)
+              (world-en-write w) (world-en-c w) (world-status w)
+              (world-pc w)))
+
+; world-mem-bus-set: MemBusAddr -> World
+; Set the world memory bus addresses
+(define (world-mem-bus-set m)
+  (make-world (world-r0 w) (world-r1 w) (world-r2 w) (world-r3 w)
+              (world-a-bus w) (world-b-bus w) (world-c-bus w) m
+              (world-alu w) (world-en-alu w) (world-en-read w)
+              (world-en-write w) (world-en-c w) (world-status w)
+              (world-pc w)))
+
+; world-alu-set: AluOp -> World
+; Set the world alu operation
+(define (world-alu-set op)
+  (make-world (world-r0 w) (world-r1 w) (world-r2 w) (world-r3 w)
+              (world-a-bus w) (world-b-bus w) (world-c-bus w) (world-mem-bus w)
+              op (world-en-alu w) (world-en-read w)
+              (world-en-write w) (world-en-c w) (world-status w)
+              (world-pc w)))
+
+; world-en-set: Boolean Boolean Boolean Boolean -> World
+; Set the world enablers status
+(define (world-en-set alu-status read-status write-status c-status)
+  (make-world (world-r0 w) (world-r1 w) (world-r2 w) (world-r3 w)
+              (world-a-bus w) (world-b-bus w) (world-c-bus w) (world-mem-bus w)
+              (world-alu w) alu-status read-status
+              write-status c-status (world-status w)
+              (world-pc w)))
+
+; world-status-set: Status -> World
+; Set the world status
+(define (world-status-set s)
+  (make-world (world-r0 w) (world-r1 w) (world-r2 w) (world-r3 w)
+              (world-a-bus w) (world-b-bus w) (world-c-bus w) (world-mem-bus w)
+              (world-alu w) (world-en-alu w) (world-en-read w)
+              (world-en-write w) (world-en-c w) s
+              (world-pc w)))
+
+; world-pc-set ProgramCounter -> World
+; Set the world program counter
+(define (world-pc-set pc)
+  (make-world (world-r0 w) (world-r1 w) (world-r2 w) (world-r3 w)
+              (world-a-bus w) (world-b-bus w) (world-c-bus w) (world-mem-bus w)
+              (world-alu w) (world-en-alu w) (world-en-read w)
+              (world-en-write w) (world-en-c w) (world-status w)
+              pc))
 
 ; Callbacks
 
@@ -52,23 +167,23 @@
 ; Execution callback.
 ; Move to the next status and return it
 (define (on-execute)
-  (next-status status)
-  status)
+  (next-status)
+  (world-status w))
 
 ; is-off? -> Boolean
 ; Returns false if the program has halted the execution
 (define (is-off?)
-  (= status STATUS-HALT))
+  (= (world-status w) STATUS-HALT))
 
-; run-alu-operation: Number Number Number -> Number
+; run-alu-operation: Number Number -> Number
 ; Run the ALU operation with the 2 given inputs
-(define (run-alu-operation op a b)
-  (cond
-    [(= op 0) (+ a b)]
-    [(= op 1) (- a b)]
-    [(= op 2) (bitwise-ior a b)]
-    [(= op 3) (bitwise-and a b)]
-    [(= op 4) a]
+(define (run-alu-operation a b)
+  (case (world-alu w)
+    [(0) (+ a b)]
+    [(1) (- a b)]
+    [(2) (bitwise-ior a b)]
+    [(3) (bitwise-and a b)]
+    [(4) a]
     [else 0]))
 
 ; Memory
@@ -95,9 +210,6 @@
 ; For reading the file
 (define memory-selector 0)
 
-; PC (Program Counter)
-(define program-counter 0)
-
 ; memory-insert: Instruction Number Number -> #<void>
 ; Inserts a MemoryValue to the memory vector in a given position
 (define (memory-insert instruction executable position)
@@ -106,8 +218,8 @@
 ; reset -> #<void>
 ; resets the memory content, program-counter and memory-selector
 (define (reset)
-  (set! status STATUS-OFF)
-  (set! program-counter 0)
+  (world-set (world-status-set STATUS-OFF))
+  (world-set (world-pc-set 0))
   (set! memory-selector 0)
   (vector-fill! memory MEMORY-VALUE-EMPTY))
 
@@ -141,24 +253,19 @@
 (define (memory-selector-set val)
   (set! memory-selector val))
 
-; program-counter-set: Number -> #<void>
-; Public program-counter setter
-(define (program-counter-set val)
-  (set! program-counter val))
-
 ; get-current-memory-instruction -> String
 ; Returns the current memory instruction:
 ;      - HALT: if the execution has been stopped
 ;      - NOP: if the content is not an Instruction
 ;      - else: returns the Instruction
 (define (get-current-memory-instruction)
-  (if (= status STATUS-HALT)
+  (if (= (world-status w) STATUS-HALT)
       ; OFF
       "HALT"
       ; ON
-      (if (< program-counter (vector-length memory))
+      (if (< (world-pc w) (vector-length memory))
           ; Valid PC
-          (let [(mem-val (vector-ref memory program-counter))]
+          (let [(mem-val (vector-ref memory (world-pc w)))]
             (if (= (memory-value-executable mem-val) 1)
                 ; Executable
                 (memory-value-content mem-val)
@@ -170,7 +277,7 @@
 ; on-invalid-pc -> String
 ; Set the status to HALT when the program-counter is invalid
 (define (on-invalid-pc)
-  (set! status STATUS-HALT)
+  (halt-execution)
   "")
 
 ; csv-line->memory-value: List<String> -> #<void>
@@ -190,19 +297,21 @@
 ; increase-program-counter -> #<void>
 ; Increase the program-counter after a cycle execution
 (define (increase-program-counter)
-  (set! program-counter (add1 program-counter)))
+  (world-set (world-pc-set (add1 (world-pc w)))))
 
 (define (halt-execution)
-  (set! status STATUS-HALT))
+  (world-set (world-status-set STATUS-HALT)))
 
 ; Status
 
 ; next-status: Number -> #<void>
 ; Increase the status or eventually reset it
-(define (next-status s)
+(define (next-status)
   (cond
-    [(= s 4) (set! status STATUS-OFF)]
-    [(not (= s STATUS-HALT)) (set! status (add1 s))]))
+    [(= (world-status w) 4)
+        (world-set (world-status-set STATUS-OFF))]
+    [(not (= (world-status w) STATUS-HALT))
+        (world-set (world-status-set (add1 (world-status w))))]))
 
 ; Utils
 
@@ -251,22 +360,28 @@
              #f
              "is-off? false failed")
   ; run-alu-operation
-  (check-eq? (run-alu-operation 0  1  2)
+  (world-set (world-alu-set 0))
+  (check-eq? (run-alu-operation 1 2)
              3
              "run-alu-operation + failed")
-  (check-eq? (run-alu-operation 1  2  1)
+  (world-set (world-alu-set 1))
+  (check-eq? (run-alu-operation 2 1)
              1
              "run-alu-operation - failed")
-  (check-eq? (run-alu-operation 2 32 12)
+  (world-set (world-alu-set 2))
+  (check-eq? (run-alu-operation 32 12)
              44
              "run-alu-operation or failed")
-  (check-eq? (run-alu-operation 3 3 2)
+  (world-set (world-alu-set 3))
+  (check-eq? (run-alu-operation 3 2)
              2
              "run-alu-operation and failed")
-  (check-eq? (run-alu-operation 4  1  2)
+  (world-set (world-alu-set 4))
+  (check-eq? (run-alu-operation 1 2)
              1
              "run-alu-operation a failed")
-  (check-eq? (run-alu-operation 5  1  2)
+  (world-set (world-alu-set 5))
+  (check-eq? (run-alu-operation 1 2)
              0
              "run-alu-operation unexpected failed")
   ; memory-insert
@@ -293,51 +408,47 @@
   (check-eq? memory-selector
              13
              "memory-selector-set failed")
-  ; program-counter-set
-  (reset)
-  (program-counter-set 18)
-  (check-eq? program-counter
-             18
-             "program-counter-set failed")
   ; get-current-memory-instruction
   (reset)
   (memory-insert "LOAD R0 1" 1 0)
   (memory-insert 12 0 1)
-  (program-counter-set 0)
+  (world-set (world-pc-set 0))
   (check-eq? (get-current-memory-instruction)
              "LOAD R0 1"
              "get-current-memory-instruction instruction [0] failed")
-  (program-counter-set 1)
+  (world-set (world-pc-set 1))
   (check-eq? (get-current-memory-instruction)
              "NOP"
              "get-current-memory-instruction data [1] failed")
-  (program-counter-set 100)
+  (world-set (world-pc-set 100))
   (check-eq? (get-current-memory-instruction)
              ""
              "get-current-memory-instruction out of bounds failed [1/2]")
-  (check-eq? status
+  (check-eq? (world-status w)
              STATUS-HALT
              "get-current-memory-instruction out of bounds failed [2/2]")
   ; increase-program-counter
   (reset)
-  (program-counter-set 18)
+  (world-set (world-pc-set 18))
   (increase-program-counter)
-  (check-eq? program-counter
+  (check-eq? (world-pc w)
              19
              "increase-program-counter failed")
   ; halt-execution
   (reset)
   (halt-execution)
-  (check-eq? status
+  (check-eq? (world-status w)
              STATUS-HALT
              "halt-execution failed")
   ; next-status
-  (next-status 1)
-  (check-eq? status
+  (world-set (world-status-set 1))
+  (next-status)
+  (check-eq? (world-status w)
              2
              "next-status default failed")
-  (next-status 4)
-  (check-eq? status
+  (world-set (world-status-set 4))
+  (next-status)
+  (check-eq? (world-status w)
              -1
              "next-status reset failed")
   ; string?->number

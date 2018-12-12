@@ -153,13 +153,13 @@
   (define exec-btn (new button%
                         [parent btns-panel]
                         [label "Execute"]
-                        [callback (lambda (b e) (exec-animate))]))
+                        [callback (lambda (b e) (on-exec))]))
 
   ; Stepper
   (define stepper-btn (new button%
                            [parent btns-panel]
                            [label "Next step"]
-                           [callback (lambda (b e) (exec-step))]))
+                           [callback (lambda (b e) (on-step))]))
 
   ; Load
   (define load-btn (new button%
@@ -167,15 +167,24 @@
                         [label "Load program"]
                         [callback (lambda (b e) (load-program))]))
 
+  ;
+  (define (on-exec)
+    (after-sync)
+    (exec-animate))
+
+  ;
+  (define (on-step)
+    (after-sync)
+    (exec-step))
+
   ; World-builder function
   (define (exec-step)
-    (let [(status (on-execute))]
-      (cond
-        [(= status 0) (set-status-0)]
-        [(= status 1) (set-status-1)]
-        [(= status 2) (set-status-2)]
-        [(= status 3) (set-status-3)]
-        [(= status 4) (set-status-4)])))
+    (case (on-execute)
+      [(0) (set-status-0)]
+      [(1) (set-status-1)]
+      [(2) (set-status-2)]
+      [(3) (set-status-3)]
+      [(4) (set-status-4)]))
 
   (define (exec-animate)
     ; Disable the btns
@@ -210,6 +219,7 @@
     (send memory-display set-value (memory-dump memory "")))
 
   (define (set-status-0)
+    (pre-sync)
     (send a-bus set-value (get-register-value (send a-bus-addr get-selection)))
     (send b-bus set-value (get-register-value (send b-bus-addr get-selection))))
 
@@ -221,8 +231,7 @@
     (cond
       [(send alu-enabler get-value)
        (send alu-c-value set-value
-             (number->string (run-alu-operation (send alu-op get-selection)
-                                                (string?->number (send alu-a-value get-value))
+             (number->string (run-alu-operation (string?->number (send alu-a-value get-value))
                                                 (string?->number (send alu-b-value get-value)))))]))
 
   (define (set-status-3)
@@ -234,7 +243,8 @@
   (define (set-status-4)
     (cond [(send c-bus-enabler get-value)
            (send (get-register (send c-bus-addr get-selection))
-                 set-value (send c-bus get-value))]))
+                 set-value (send c-bus get-value))])
+    (after-sync))
 
   ; Registers utils
   (define (get-register-value v)
@@ -270,10 +280,11 @@
   ; Set the memory bus to the given value and store it
   ; onto the given register
   (define (run-load instr)
-    (run-pre #f #t #f #t)
+    (world-set (world-en-set #f #t #f #t))
 
-    (send c-bus-addr set-selection (get-instr-value instr 1 #t))
-    (send memory-bus set-value (number?->string (memory-get-content (get-instr-value instr 2 #f))))
+    (world-set (world-out-bus-set (get-instr-value instr 1 #t)))
+    (world-set (world-mem-bus-set (number?->string (memory-get-content
+        (get-instr-value instr 2 #f)))))
 
     (increase-program-counter)
     (exec-animate))
@@ -284,14 +295,16 @@
   ; Store the given bus value to the given memory address
   ; through its bus
   (define (run-store instr)
-    (run-pre #t #f #t #f)
+    (world-set (world-en-set #t #f #t #f))
 
-    (send c-bus-addr set-selection (get-instr-value instr 1 #t))
-    (send alu-op set-selection 4)
+    (world-set (world-out-bus-set (get-instr-value instr 1 #t)))
+    (world-set (world-alu-set 4))
     (memory-selector-set (get-instr-value instr 2 #f))
 
     (increase-program-counter)
     (exec-animate)
+
+    ; Update the memory
     (memory-write (get-register-value (get-instr-value instr 1 #t)))
     (print-memory))
 
@@ -300,11 +313,12 @@
   ;
   ; Copy the value of a register to another
   (define (run-move instr)
-    (run-pre #t #f #f #t)
+    (world-set (world-en-set #t #f #f #t))
 
-    (send a-bus-addr set-selection (get-instr-value instr 1 #t))
-    (send c-bus-addr set-selection (get-instr-value instr 2 #t))
-    (send alu-op set-selection 4)
+    (world-set (world-in-bus-set (get-instr-value instr 1 #t)
+                                 (world-b-bus (world-get))))
+    (world-set (world-out-bus-set (get-instr-value instr 2 #t)))
+    (world-set (world-alu-set 4))
 
     (increase-program-counter)
     (exec-animate))
@@ -319,12 +333,12 @@
   ; Set the alu operation and the bus so that the specified
   ; operation is executed and store it to a given register
   (define (run-alu-op instr op)
-    (run-pre #t #f #f #t)
+    (world-set (world-en-set #t #f #f #t))
 
-    (send alu-op set-selection op)
-    (send a-bus-addr set-selection (get-instr-value instr 1 #t))
-    (send b-bus-addr set-selection (get-instr-value instr 2 #t))
-    (send c-bus-addr set-selection (get-instr-value instr 3 #t))
+    (world-set (world-in-bus-set (get-instr-value instr 1 #t)
+                                 (get-instr-value instr 2 #t)))
+    (world-set (world-out-bus-set (get-instr-value instr 3 #t)))
+    (world-set (world-alu-set op))
 
     (increase-program-counter)
     (exec-animate))
@@ -334,7 +348,7 @@
   ;
   ; Set the program counter to the given value
   (define (run-branch instr)
-    (program-counter-set (get-instr-value instr 1 #f)))
+    (world-set (world-pc-set (get-instr-value instr 1 #f))))
 
   ; run-bzero: String -> #<void>
   ;    BZERO MEM
@@ -342,7 +356,7 @@
   ; Set the program counter to the given value if the alu result was 0
   (define (run-bzero instr)
     (cond [(= (string?->number (send alu-c-value get-value)) 0)
-             (program-counter-set (get-instr-value instr 1 #f))])
+             (world-set (world-pc-set (get-instr-value instr 1 #f)))])
     (exec-animate))
 
   ; run-bneg: String -> #<void>
@@ -351,7 +365,7 @@
   ; Set the program counter to the given value if the alu result was less than 0
   (define (run-bneg instr)
     (cond [(< (string?->number (send alu-c-value get-value)) 0)
-             (program-counter-set (get-instr-value instr 1 #f))])
+             (world-set (world-pc-set (get-instr-value instr 1 #f)))])
     (exec-animate))
 
   ; run-nop -> #<void>
@@ -368,14 +382,44 @@
   (define (run-halt)
     (halt-execution))
 
-  ; run-pre: Boolean Boolean Boolean Boolean -> #<void>
-  ;
-  ; Setup the circuits status before executing a cycle
-  (define (run-pre alu-status read-status write-status c-status)
-    (send alu-enabler set-value alu-status)
-    (send memory-read-enabler set-value read-status)
-    (send memory-write-enabler set-value write-status)
-    (send c-bus-enabler set-value c-status))
+  ; pre-sync -> #<void>
+  ; Sync the GUI components with the world before cycle execution
+  (define (pre-sync)
+    (let [(w (world-get))]
+      ; Input registers
+      (send r0-input set-value (number->string (world-r0 w)))
+      (send r1-input set-value (number->string (world-r1 w)))
+      (send r2-input set-value (number->string (world-r2 w)))
+      (send r3-input set-value (number->string (world-r3 w)))
+      ; Bus addresses
+      (send a-bus-addr set-selection (world-a-bus w))
+      (send b-bus-addr set-selection (world-b-bus w))
+      (send c-bus-addr set-selection (world-c-bus w))
+      (send memory-bus set-value (number?->string (world-mem-bus w)))
+      ; Alu
+      (send alu-op set-selection (world-alu w))
+      ; Enablers
+      (send alu-enabler set-value (world-en-alu w))
+      (send memory-read-enabler set-value (world-en-read w))
+      (send memory-write-enabler set-value (world-en-write w))
+      (send c-bus-enabler set-value (world-en-c w))))
+
+  ; after-sync -> #<void>
+  ; Sync the world with the GUI components after cycle execution
+  (define (after-sync)
+    (world-set (world-r-set (string?->number (send r0-input get-value))
+                            (string?->number (send r1-input get-value))
+                            (string?->number (send r2-input get-value))
+                            (string?->number (send r3-input get-value))))
+    (world-set (world-in-bus-set (send a-bus-addr get-selection)
+                                 (send b-bus-addr get-selection)))
+    (world-set (world-out-bus-set (send c-bus-addr get-selection)))
+    (world-set (world-mem-bus-set (string->number (send memory-bus get-value))))
+    (world-set (world-en-set (send alu-enabler get-value)
+                             (send memory-read-enabler get-value)
+                             (send memory-write-enabler get-value)
+                             (send c-bus-enabler get-value))))
+
 
   ; Show the window
   (send root show #t))
