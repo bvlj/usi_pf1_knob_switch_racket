@@ -8,7 +8,7 @@
   ; Root frame
   (define root (new frame%
                     [label "Knob and Switch computer"]
-                    [width 400]
+                    [width 800]
                     [height 400]))
   ; Root panels
   (define main-panel (new horizontal-panel%
@@ -107,9 +107,9 @@
                           [init-value "0"]))
   (define memory-display (new text-field%
                               [parent memory-display-panel]
-                              [label "Memory"]
+                              [label "Memory content"]
                               [init-value "(empty)"]
-                              [style (cons 'multiple '())]))
+                              [style (cons 'multiple (cons 'vertical-label '()))]))
   ; ALU panels
   (define alu-ab-panel (new horizontal-panel%
                             [parent alu-panel]))
