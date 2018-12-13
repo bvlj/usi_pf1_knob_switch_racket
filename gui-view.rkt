@@ -332,7 +332,7 @@
   ; run-alu-op: String Number -> #<void>
   ;
   ;    ADD REG-A REG-B REG-C
-  ;    SUM REG-A REG-B REG-C
+  ;    SUB REG-A REG-B REG-C
   ;    OR  REG-A REG-B REG-C
   ;    AND REG-A REG-B REG-C
   ;

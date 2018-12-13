@@ -145,10 +145,8 @@ To run a microprogram, click on the **Load program** button on the bottom and se
 
 ## Compiling
 
-It's possible to compile this program using [raco]():
+It's possible to compile this program using [raco](https://docs.racket-lang.org/raco/):
 
 ```
-raco exe --gui main.rkt
+raco exe --gui --ico res/icon.ico --icns res/icon.icns --embed-dlls ++lang racket/gui main.rkt
 ```
-
-On windows `main.exe` will be the

@@ -3,3 +3,7 @@
 .#*.rkt
 .DS_Store
 compiled/
+
+main.app
+main.exe
+main
