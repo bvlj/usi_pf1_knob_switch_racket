@@ -165,7 +165,7 @@
   (define load-btn (new button%
                         [parent btns-panel]
                         [label "Load program"]
-                        [callback (lambda (b e) (load-program))]))
+                        [callback (lambda (b e) (pick-program))]))
 
   ;
   (define (on-exec)
@@ -204,11 +204,17 @@
     ; Re-enable the btns
     (send btns-panel enable #t))
 
-  (define (load-program)
-    (reset)
-    (memory-load-microprogram "test.csv")
-    (print-memory)
-    (exec-program))
+  (define (pick-program)
+    (load-program (get-file "Open a microprogram"
+                            root)))
+
+
+  (define (load-program p)
+    (cond [(path? p)
+      (reset)
+      (memory-load-microprogram (path->string p))
+      (print-memory)
+      (exec-program)]))
 
   (define (exec-program)
     (cond [(not (is-off?))

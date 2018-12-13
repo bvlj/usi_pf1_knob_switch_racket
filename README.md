@@ -20,8 +20,8 @@ Our idea was to create a Program that imitates the _"Knob and Switch Computer"_ 
 4. Memory support (and visualization)
 5. MicroInstructions interpreter to execute a MicroProgram from a given file
 6. Decouple functional part from obj-oriented using a world abstraction
+7. Custom microprogram execution
 
 ### To do
 
-7. Custom microprogram execution
 8. Documentation
