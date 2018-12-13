@@ -167,16 +167,19 @@
                         [label "Load program"]
                         [callback (lambda (b e) (pick-program))]))
 
-  ;
+  ; on-exec -> #<void>
+  ; Callback for animate
   (define (on-exec)
     (after-sync)
     (exec-animate))
 
-  ;
+  ; on-step -> #<void>
+  ; Callback for step
   (define (on-step)
     (after-sync)
     (exec-step))
 
+  ; exec-step -> #<void>
   ; World-builder function
   (define (exec-step)
     (case (on-execute)
@@ -204,11 +207,14 @@
     ; Re-enable the btns
     (send btns-panel enable #t))
 
+  ; pick-program -> #<void>
+  ; opens the file selector and executes the selected file
   (define (pick-program)
     (load-program (get-file "Open a microprogram"
                             root)))
 
-
+  ; load-program p -> #<void>
+  ; loads a program from a path
   (define (load-program p)
     (cond [(path? p)
       (reset)
@@ -216,23 +222,33 @@
       (print-memory)
       (exec-program)]))
 
+  ; exec-program -> #<void>
+  ; executes the csv program
   (define (exec-program)
     (cond [(not (is-off?))
            (parse-microinstruction (get-current-memory-instruction))
            (exec-program)]))
 
+  ; print-memory -> #<void>
+  ; prints out the memory to the memory window
   (define (print-memory)
     (send memory-display set-value (memory-dump memory "")))
 
+  ; set-status-0 -> #<void>
+  ; set the status to 0
   (define (set-status-0)
     (pre-sync)
     (send a-bus set-value (get-register-value (send a-bus-addr get-selection)))
     (send b-bus set-value (get-register-value (send b-bus-addr get-selection))))
 
+  ; set-status-0 -> #<void>
+  ; set the status to 1
   (define (set-status-1)
     (send alu-a-value set-value (send a-bus get-value))
     (send alu-b-value set-value (send b-bus get-value)))
 
+  ; set-status-0 -> #<void>
+  ; set the status to 2
   (define (set-status-2)
     (cond
       [(send alu-enabler get-value)
@@ -240,12 +256,16 @@
              (number->string (run-alu-operation (string?->number (send alu-a-value get-value))
                                                 (string?->number (send alu-b-value get-value)))))]))
 
+  ; set-status-0 -> #<void>
+  ; set the status to 3
   (define (set-status-3)
     (cond
       [(send memory-read-enabler get-value) (send c-bus set-value (send memory-bus get-value))]
       [(send alu-enabler get-value) (send c-bus set-value (send alu-c-value get-value))]
       [(send memory-write-enabler get-value) (memory-write (send alu-c-value get-value))]))
 
+  ; set-status-0 -> #<void>
+  ; set the status to 4
   (define (set-status-4)
     (cond [(send c-bus-enabler get-value)
            (send (get-register (send c-bus-addr get-selection))
