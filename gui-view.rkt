@@ -235,20 +235,20 @@
     (send memory-display set-value (memory-dump memory "")))
 
   ; set-status-0 -> #<void>
-  ; set the status to 0
+  ; set the status to 0, sets the a and b bus values
   (define (set-status-0)
     (pre-sync)
     (send a-bus set-value (get-register-value (send a-bus-addr get-selection)))
     (send b-bus set-value (get-register-value (send b-bus-addr get-selection))))
 
-  ; set-status-0 -> #<void>
-  ; set the status to 1
+  ; set-status-1 -> #<void>
+  ; set the status to 1, copies to alu the a and b bus values as inputs
   (define (set-status-1)
     (send alu-a-value set-value (send a-bus get-value))
     (send alu-b-value set-value (send b-bus get-value)))
 
-  ; set-status-0 -> #<void>
-  ; set the status to 2
+  ; set-status-2 -> #<void>
+  ; set the status to 2, if alu is active runs the alu operations
   (define (set-status-2)
     (cond
       [(send alu-enabler get-value)
@@ -256,27 +256,31 @@
              (number->string (run-alu-operation (string?->number (send alu-a-value get-value))
                                                 (string?->number (send alu-b-value get-value)))))]))
 
-  ; set-status-0 -> #<void>
-  ; set the status to 3
+  ; set-status-3 -> #<void>
+  ; set the status to 3, can copy value of memory bus to c bus or vice versa, or copy alu
+  ; output to c bus
   (define (set-status-3)
     (cond
       [(send memory-read-enabler get-value) (send c-bus set-value (send memory-bus get-value))]
       [(send alu-enabler get-value) (send c-bus set-value (send alu-c-value get-value))]
       [(send memory-write-enabler get-value) (memory-write (send alu-c-value get-value))]))
 
-  ; set-status-0 -> #<void>
-  ; set the status to 4
+  ; set-status-4 -> #<void>
+  ; set the status to 4, if c bus is active copy the value to the selected output register
   (define (set-status-4)
     (cond [(send c-bus-enabler get-value)
            (send (get-register (send c-bus-addr get-selection))
                  set-value (send c-bus get-value))])
     (after-sync))
 
-  ; Registers utils
+  ; get-register-value: Number -> String
+  ; Returns a Register value
   (define (get-register-value v)
     (let [(register (get-register v))]
       (if (boolean? register) 0 (send register get-value))))
 
+  ; get-register: Number -> Register
+  ; returns the respective Register
   (define (get-register v)
     (case v
       [(0) r0-input]
@@ -285,6 +289,8 @@
       [(3) r3-input]
       [else #f]))
 
+  ; parse-microinstruction: String -> #<void>
+  ; Given a microinstruction, run it
   (define (parse-microinstruction instr)
     (cond
       [(string-prefix? instr "LOAD ") (run-load instr)]
