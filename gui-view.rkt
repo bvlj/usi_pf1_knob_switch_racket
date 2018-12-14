@@ -441,6 +441,7 @@
                                  (send b-bus-addr get-selection)))
     (world-set (world-out-bus-set (send c-bus-addr get-selection)))
     (world-set (world-mem-bus-set (string->number (send memory-bus get-value))))
+    (world-set (world-alu-set (send alu-op get-selection)))
     (world-set (world-en-set (send alu-enabler get-value)
                              (send memory-read-enabler get-value)
                              (send memory-write-enabler get-value)
