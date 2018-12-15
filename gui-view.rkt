@@ -380,6 +380,7 @@
   ;
   ; Set the program counter to the given value
   (define (run-branch instr)
+    (world-set (world-en-set #f #f #f #f))
     (world-set (world-pc-set (get-instr-value instr 1 #f))))
 
   ; run-bzero: String -> #<void>
@@ -387,18 +388,20 @@
   ;
   ; Set the program counter to the given value if the alu result was 0
   (define (run-bzero instr)
+    (world-set (world-en-set #f #f #f #f))
     (cond [(= (string?->number (send alu-c-value get-value)) 0)
-             (world-set (world-pc-set (get-instr-value instr 1 #f)))])
-    (exec-animate))
+             (world-set (world-pc-set (get-instr-value instr 1 #f)))]
+          [else (increase-program-counter)]))
 
   ; run-bneg: String -> #<void>
   ;    BNEG MEM
   ;
   ; Set the program counter to the given value if the alu result was less than 0
   (define (run-bneg instr)
+    (world-set (world-en-set #f #f #f #f))
     (cond [(< (string?->number (send alu-c-value get-value)) 0)
-             (world-set (world-pc-set (get-instr-value instr 1 #f)))])
-    (exec-animate))
+             (world-set (world-pc-set (get-instr-value instr 1 #f)))]
+          [else (increase-program-counter)]))
 
   ; run-nop -> #<void>
   ;    NOP
