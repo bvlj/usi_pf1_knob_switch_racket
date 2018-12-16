@@ -1,4 +1,10 @@
 #lang racket
+; Knob and switch computer: Controller
+; This file contains the back-end of the knob and switch computer,
+; it also contains unit tests for the logic part of the program
+;
+; Authors: Bevilacqua Joey
+;          Brunner Nicola
 
 (require rackunit)
 (require 2htdp/batch-io)
@@ -17,31 +23,29 @@
          world-status-set
          world-pc-set)
 
-(provide LIST-OF-REGISTERS)
-(provide LIST-OF-ALU-OPERATIONS)
+(provide LIST-OF-REGISTERS
+         LIST-OF-ALU-OPERATIONS)
 
-(provide memory)
+(provide memory
+         reset
+         memory-dump
+         memory-get-content
+         memory-load-microprogram
+         memory-selector-set
+         memory-write)
 
-(provide reset)
-(provide memory-write)
-(provide memory-load-microprogram)
-(provide memory-dump)
-(provide memory-get-content)
-(provide memory-selector-set)
+(provide halt-execution
+         increase-program-counter)
 
-(provide halt-execution)
-(provide increase-program-counter)
+(provide on-execute
+         is-off?
+         run-alu-operation
+         get-current-memory-instruction)
 
-(provide on-execute)
-(provide is-off?)
-(provide run-alu-operation)
-(provide get-current-memory-instruction)
-
-(provide string?->number)
-(provide number?->string)
-
-(provide string-prefix?)
-(provide get-instr-value)
+(provide string?->number
+         number?->string
+         string-prefix?
+         get-instr-value)
 
 ; Data
 
@@ -53,9 +57,6 @@
 ; Default status, the computer is off
 (define STATUS-OFF -1)
 (define STATUS-HALT -2)
-; Current status of execution
-; A status is an Number
-;(define status STATUS-OFF)
 
 ; World abstraction
 
@@ -319,7 +320,7 @@
 ; where String? is one of:
 ;     - String
 ;     - Number
-; Converts a potentially String to a Number
+; Converts a potential String to a Number
 (define (string?->number v)
   (if (number? v) v
       (if (string? v) (string->number v) 0)))
@@ -328,7 +329,7 @@
 ; where Number? is one of:
 ;     - String
 ;     - Number
-; Converts a potentially Number to a String
+; Converts a potential Number to a String
 (define (number?->string v)
   (if (string? v) v
       (if (number? v) (number->string v) "")))
@@ -458,7 +459,7 @@
   (check-eq? (string?->number 123)
              123
              "string?->number number failed")
-  number?->string
+  ; number?->string
   (check-equal? (number?->string 4)
                 "4"
                 "number?->string number failed")

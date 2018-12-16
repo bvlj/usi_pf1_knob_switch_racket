@@ -1,6 +1,12 @@
 #lang racket/gui
-
+; Knob and switch computer: View
+; This file contains the front-end of the knob and switch computer
+;
+; Authors: Bevilacqua Joey
+;          Brunner Nicola
 (require "gui-controller.rkt")
+
+; Provide
 
 (provide gui-main)
 
@@ -29,13 +35,13 @@
   ; Top panels
   (define c-bus-addr-panel (new group-box-panel%
                                 [parent top-panel]
-                                [label "Out Bus Address"]))
+                                [label "Out bus Address"]))
   (define registers-panel (new group-box-panel%
                                [parent top-panel]
                                [label "Register bank"]))
   (define ab-bus-addr-panel (new group-box-panel%
                                  [parent top-panel]
-                                 [label "In Bus Address"]))
+                                 [label "In bus Address"]))
   ; Middle panels
   (define c-bus-panel (new vertical-panel%
                            [parent middle-panel]))
@@ -82,12 +88,12 @@
   ; C Bus Enabler
   (define c-bus-enabler (new check-box%
                              [parent c-bus-addr-panel]
-                             [label "Enable C Bus"]
+                             [label "Enable Out bus"]
                              [value #t]))
   ; C Bus
   (define c-bus (new text-field%
                      [parent c-bus-panel]
-                     [label "C Bus"]
+                     [label "C bus"]
                      [init-value "0"]))
   ; Memory
   (define memory-panel (new group-box-panel%
